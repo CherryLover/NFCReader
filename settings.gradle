@@ -12,5 +12,6 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
+ext.kotlin_version = '1.6.0'
 rootProject.name = "NFCReader"
 include ':app'
