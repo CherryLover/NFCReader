@@ -24,7 +24,7 @@ class LoyaltyCardReader() : ReaderCallback {
     private const val TAG = "LoyaltyCardReader"
 
     // AID for our loyalty card service.
-    private const val SAMPLE_LOYALTY_CARD_AID = "F123422222"
+    private const val SAMPLE_LOYALTY_CARD_AID = "F123422221"
 
     // ISO-DEP command HEADER for selecting an AID.
     // Format: [Class | Instruction | Parameter 1 | Parameter 2]
@@ -123,19 +123,27 @@ class LoyaltyCardReader() : ReaderCallback {
       log("""Requesting remote AID: $SAMPLE_LOYALTY_CARD_AID""".trimIndent())
       val command = buildSelectApdu(SAMPLE_LOYALTY_CARD_AID)
       log("""Sending: ${byteArrayToHexString(command)}""".trimIndent())
-      val result = isoDep.transceive(command)
-      val resultLength = result.size
-      val statusWord = byteArrayOf(result[resultLength - 2], result[resultLength - 1])
-      log("Received: ${byteArrayToHexString(result)} status: ${byteArrayToHexString(statusWord)}")
-      val payload = Arrays.copyOf(result, resultLength - 2)
-      if (Arrays.equals(SELECT_OK_SW, statusWord)) {
-        val accountNumber = byteArrayToHexString(payload)
-        log("Received: $accountNumber\n")
-        if (accountNumber == "1234567890") {
-          startAccountCommit(isoDep)
-        } else {
-          log("account number wrong\n")
-        }
+      val bytes = isoDep.transceive(command)
+//      val result = String(bytes)
+      val result = byteArrayToHexString(bytes)
+      log("receive $result ${Arrays.toString(bytes)}")
+      if (result == "FFFF") {
+        val d1 = byteArrayOf(0x53, 0x69, 0x67, 0x6e, 0x00, 0x00, 0x00, 0x00)
+        isoDep.transceive(d1)
+      } else if ("9098FFFF4207" == result) {
+        val d1 = byteArrayOf(0x53, 0x69, 0x67, 0x6e, 0x00, 0x00, 0x00, 0x00)
+        isoDep.transceive(d1)
+      } else if ("2E43FFFF4207" == result) {
+        val d1 = byteArrayOf(0x53, 0x69, 0x67, 0x6e, 0x08, 0x51, 0x47, 0x12)
+        log("send random num")
+        var transceive = isoDep.transceive(d1)
+      } else if (result.startsWith("FABC")) {
+        log("receive FABC")
+        log("send  AAAA")
+        val result6 = isoDep.transceive(hexStringToByteArray("AAAA"))
+        log("receive ${byteArrayToHexString(result6)}")
+        val result7 = isoDep.transceive(hexStringToByteArray("BBBB"))
+        log("receive ${byteArrayToHexString(result7)}")
       }
     } catch (e: IOException) {
       loge("Error communicating with card: $e")
@@ -143,7 +151,7 @@ class LoyaltyCardReader() : ReaderCallback {
   }
 
   private fun startAccountCommit(isoDep: IsoDep) {
-    val command = hexStringToByteArray("0011AB")
+    val command = hexStringToByteArray("20121212")
     log("Sending: ${byteArrayToHexString(command)}")
     val result = byteArrayToHexString(isoDep.transceive(command))
     log("Received: $result")
